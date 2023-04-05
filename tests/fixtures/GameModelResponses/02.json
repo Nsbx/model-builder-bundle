@@ -1,0 +1,27 @@
+{
+    "id": 4987,
+    "title": "Game Title",
+    "url": "https://game.test/",
+    "categories": [
+        "2d",
+        "platformer"
+    ],
+    "keyImages" : [
+        {
+            "url": "https://game.test/image-01.png",
+            "type": "wide"
+        },
+        {
+            "url": "https://game.test/image-02.png",
+            "type": "icon"
+        },
+        {
+            "url": "https://game.test/image-03.png",
+            "type": "poster"
+        }
+    ],
+    "price": {
+        "price": 19.99,
+        "currencySymbol": "$"
+    }
+}
