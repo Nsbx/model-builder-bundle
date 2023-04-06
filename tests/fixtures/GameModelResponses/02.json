@@ -1,10 +1,11 @@
 {
-    "id": 4987,
+    "id": 5897,
     "title": "Game Title",
     "url": "https://game.test/",
     "categories": [
         "2d",
-        "platformer"
+        "rogue-lite",
+        "boss"
     ],
     "keyImages" : [
         {
@@ -21,7 +22,7 @@
         }
     ],
     "price": {
-        "price": 19.99,
-        "currencySymbol": "$"
+        "price": 5.99,
+        "currencySymbol": "€"
     }
 }

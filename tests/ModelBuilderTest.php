@@ -30,12 +30,12 @@ class ModelBuilderTest extends TestCase
 
         $gameModel = new GameModel(json_decode($gameModelResponse));
 
-        $this->assertEquals(4987, $gameModel->getId());
+        $this->assertEquals(5897, $gameModel->getId());
         $this->assertEquals('Game Title', $gameModel->getName());
         $this->assertEquals('https://game.test/', $gameModel->getUrl());
-        $this->assertCount(2, $gameModel->getCategories());
+        $this->assertCount(3, $gameModel->getCategories());
         $this->assertCount(3, $gameModel->getImages());
-        $this->assertEquals(19.99, $gameModel->getPrice()->getPrice());
-        $this->assertEquals('$', $gameModel->getPrice()->getCurrency());
+        $this->assertEquals(5.99, $gameModel->getPrice()->getPrice());
+        $this->assertEquals('€', $gameModel->getPrice()->getCurrency());
     }
 }

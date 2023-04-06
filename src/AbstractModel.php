@@ -53,15 +53,23 @@ abstract class AbstractModel implements ModelInterface
                     $isCollection = $property['isCollection'];
                 }
 
-                if ($isCollection) {
+                $isModel = false;
+                if (array_key_exists('class', $property)) {
+                    $isModel = true;
                     $modelClass = $property['class'];
+                }
 
-                    $this->{$propertyKey} = [];
-                    foreach ($propertyData as $itemData) {
-                        $itemModel = new $modelClass($itemData);
-                        $this->{$propertyKey}[] = $itemModel;
+                if ($isModel) {
+                    if ($isCollection) {
+                        $this->{$propertyKey} = [];
+                        foreach ($propertyData as $itemData) {
+                            $itemModel = new $modelClass($itemData);
+                            $this->{$propertyKey}[] = $itemModel;
+                        }
+                    } else {
+                        $itemModel = new $modelClass($propertyData);
+                        $this->propertyAccessor->setValue($this, $propertyKey, $itemModel);
                     }
-
                     continue;
                 }
                 $this->propertyAccessor->setValue($this, $propertyKey, $propertyData);
@@ -86,7 +94,7 @@ abstract class AbstractModel implements ModelInterface
                 $methodPath = str_replace('set', '', $name);
                 $methodPath = strtolower($methodPath);
                 $this->propertyAccessor->setValue($this, $methodPath, current($arguments));
-                break;
+                return $this;
         }
     }
 }

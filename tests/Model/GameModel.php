@@ -45,9 +45,4 @@ class GameModel extends AbstractModel
             ]
         ];
     }
-
-    public function setPrice(mixed $data): void
-    {
-        $this->price = new PriceModel($data);
-    }
 }
