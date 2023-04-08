@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace Nsbx\Bundle\ModelBuilder\Tests\Model;
 
-use ArrayObject;
 use Nsbx\Bundle\ModelBuilder\AbstractModel;
+use Nsbx\Bundle\ModelBuilder\Mapping\Collection;
+use Nsbx\Bundle\ModelBuilder\Mapping\Mapping;
+use Nsbx\Bundle\ModelBuilder\Mapping\Model;
+use Nsbx\Bundle\ModelBuilder\Mapping\Property;
+use Nsbx\Bundle\ModelBuilder\Mapping\PropertyCollection;
 
 /**
  * @method int getId()
@@ -24,25 +28,15 @@ class GameModel extends AbstractModel
     public array $images;
     public PriceModel $price;
 
-    public function getMapping(): array
+    public function getMapping(): Mapping
     {
-        return [
-            'id'         => 'id',
-            'name'       => 'title',
-            'url'        => [
-                'path' => 'test.url',
-                'alternativePath' => 'url'
-            ],
-            'categories' => 'categories',
-            'images'         => [
-                'path'         => 'keyImages',
-                'class'        => ImageModel::class,
-                'isCollection' => true,
-            ],
-            'price' => [
-                'path'         => 'price',
-                'class'        => PriceModel::class,
-            ]
-        ];
+        return Mapping::new(
+            Property::new('id', 'id'),
+            Property::new('name', 'title'),
+            Property::new('url', 'test.url', 'url'),
+            Property::new('categories', 'categories'),
+            Collection::new('images', 'keyImages', ImageModel::class, 'type'),
+            Model::new('price', 'price', PriceModel::class),
+        );
     }
 }

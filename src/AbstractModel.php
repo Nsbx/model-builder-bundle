@@ -4,97 +4,154 @@ declare(strict_types=1);
 
 namespace Nsbx\Bundle\ModelBuilder;
 
-use ArrayObject;
+use Nsbx\Bundle\ModelBuilder\Mapping\Collection;
+use Nsbx\Bundle\ModelBuilder\Mapping\Model;
+use Nsbx\Bundle\ModelBuilder\Mapping\Property;
+use Nsbx\Bundle\ModelBuilder\Mapping\PropertyCollection;
 use Symfony\Component\PropertyAccess\PropertyAccess;
 use Symfony\Component\PropertyAccess\PropertyAccessorInterface;
 
 abstract class AbstractModel implements ModelInterface
 {
-    protected PropertyAccessorInterface $propertyAccessor;
-
     public function __construct(mixed $modelData)
     {
-        $this->propertyAccessor = PropertyAccess::createPropertyAccessorBuilder()
-            ->disableExceptionOnInvalidPropertyPath()
+        $this->buildModel($modelData);
+    }
+
+    private function getPropertyAccessor()
+    {
+        return PropertyAccess::createPropertyAccessorBuilder()
             ->disableExceptionOnInvalidIndex()
+            ->disableExceptionOnInvalidPropertyPath()
             ->getPropertyAccessor()
         ;
+    }
 
-        $this->buildModel($modelData);
+    public function __call(string $name, array $arguments): mixed
+    {
+        $propertyAccessor = $this->getPropertyAccessor();
+
+        switch (true) {
+            case str_contains($name, 'get'):
+                $methodPath = str_replace('get', '', $name);
+                $methodPath = lcfirst($methodPath);
+                return $propertyAccessor->getValue($this, $methodPath);
+            case str_contains($name, 'set'):
+                $methodPath = str_replace('set', '', $name);
+                $methodPath = lcfirst($methodPath);
+                $propertyAccessor->setValue($this, $methodPath, current($arguments));
+                return $this;
+        }
     }
 
     public function buildModel(\stdClass|array $modelData): void
     {
-        foreach ($this->getMapping() as $propertyKey => $property) {
-            if (!is_array($property)) {
-                $propertyData = $this->propertyAccessor->getValue($modelData, $property);
-                $this->propertyAccessor->setValue($this, $propertyKey, $propertyData);
-            } else {
-                try {
-                    $propertyData = $this->propertyAccessor->getValue($modelData, $property['path']);
-                } catch (\Exception $exception) {
-                    $propertyData = null;
-                }
-
-                try {
-                    if (array_key_exists('alternativePath', $property) && $propertyData === null) {
-                        $propertyData = $this->propertyAccessor->getValue($modelData, $property['alternativePath']);
-                    }
-                } catch (\Exception $exception) {
-                    $propertyData = null;
-                }
-
-                if ($propertyData === null) {
-                    continue;
-                }
-
-                $isCollection = false;
-                if (array_key_exists('isCollection', $property)) {
-                    $isCollection = $property['isCollection'];
-                }
-
-                $isModel = false;
-                if (array_key_exists('class', $property)) {
-                    $isModel = true;
-                    $modelClass = $property['class'];
-                }
-
-                if ($isModel) {
-                    if ($isCollection) {
-                        $this->{$propertyKey} = [];
-                        foreach ($propertyData as $itemData) {
-                            $itemModel = new $modelClass($itemData);
-                            $this->{$propertyKey}[] = $itemModel;
-                        }
-                    } else {
-                        $itemModel = new $modelClass($propertyData);
-                        $this->propertyAccessor->setValue($this, $propertyKey, $itemModel);
-                    }
-                    continue;
-                }
-                $this->propertyAccessor->setValue($this, $propertyKey, $propertyData);
+        foreach ($this->getMapping()->getMappingOptions() as $mappingOption) {
+            switch (true) {
+                case $mappingOption instanceof Property:
+                    $this->buildPropertyOption($mappingOption, $modelData);
+                    break;
+                case $mappingOption instanceof Model:
+                    $this->buildModelOption($mappingOption, $modelData);
+                    break;
+                case $mappingOption instanceof Collection:
+                    $this->buildCollectionOption($mappingOption, $modelData);
+                    break;
+                case $mappingOption instanceof PropertyCollection:
+                    $this->buildPropertyCollectionOption($mappingOption, $modelData);
+                    break;
             }
         }
     }
 
-    /**
-     * @param string $name
-     * @param array  $arguments
-     *
-     * @return mixed
-     */
-    public function __call(string $name, array $arguments): mixed
-    {
-        switch (true) {
-            case str_contains($name, 'get'):
-                $methodPath = str_replace('get', '', $name);
-                $methodPath = strtolower($methodPath);
-                return $this->propertyAccessor->getValue($this, $methodPath);
-            case str_contains($name, 'set'):
-                $methodPath = str_replace('set', '', $name);
-                $methodPath = strtolower($methodPath);
-                $this->propertyAccessor->setValue($this, $methodPath, current($arguments));
-                return $this;
+    private function buildPropertyOption(
+        Property $mappingOption,
+        mixed $modelData
+    ): void {
+        $propertyAccessor = $this->getPropertyAccessor();
+
+        $propertyData = $this->getValueOrNull($modelData, $mappingOption->path);
+
+        if ($mappingOption->alternativePath !== null && $propertyData === null) {
+            $propertyData = $this->getValueOrNull($modelData, $mappingOption->alternativePath);
         }
+
+        $propertyAccessor->setValue($this, $mappingOption->property, $propertyData);
+    }
+
+    private function buildModelOption(
+        Model $mappingOption,
+        mixed $modelData
+    ): void {
+        $propertyAccessor = $this->getPropertyAccessor();
+
+        $propertyData = $this->getValueOrNull($modelData, $mappingOption->path);
+        $modelClass   = $mappingOption->modelClass;
+        $itemModel    = new $modelClass($propertyData);
+
+        $propertyAccessor->setValue($this, $mappingOption->property, $itemModel);
+    }
+
+    private function buildCollectionOption(
+        Collection $mappingOption,
+        mixed $modelData
+    ): void {
+        $propertyAccessor = $this->getPropertyAccessor();
+
+        $propertyData = $this->getValueOrNull($modelData, $mappingOption->path);
+
+        if ($propertyData === null) {
+            return;
+        }
+
+        $modelClass = $mappingOption->modelClass;
+
+        $this->{$mappingOption->property} = [];
+
+        foreach ($propertyData as $itemData) {
+            $itemModel = new $modelClass($itemData);
+
+            if ($mappingOption->indexBy !== null) {
+                $indexValue = $this->getValueOrNull($itemModel, $mappingOption->indexBy);
+
+                $this->{$mappingOption->property}[$indexValue] = $itemModel;
+                continue;
+            }
+
+            $this->{$mappingOption->property}[] = $itemModel;
+        }
+    }
+
+    private function buildPropertyCollectionOption(
+        PropertyCollection $mappingOption,
+        mixed $modelData
+    ): void {
+        $propertyAccessor = $this->getPropertyAccessor();
+
+        $propertyData = $this->getValueOrNull($modelData, $mappingOption->path);
+
+        if ($propertyData === null) {
+            return;
+        }
+
+        $this->{$mappingOption->property} = [];
+
+        foreach ($propertyData as $itemData) {
+            $data                               = $this->getValueOrNull($itemData, $mappingOption->subPath);
+            $this->{$mappingOption->property}[] = $data;
+        }
+    }
+
+    private function getValueOrNull(mixed $modelData, string $path)
+    {
+        $propertyAccessor = $this->getPropertyAccessor();
+
+        try {
+            $propertyData = $propertyAccessor->getValue($modelData, $path);
+        } catch (\Exception $exception) {
+            $propertyData = null;
+        }
+
+        return $propertyData;
     }
 }

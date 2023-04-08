@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Nsbx\Bundle\ModelBuilder\Tests\Model;
 
 use Nsbx\Bundle\ModelBuilder\AbstractModel;
+use Nsbx\Bundle\ModelBuilder\Mapping\Mapping;
+use Nsbx\Bundle\ModelBuilder\Mapping\Property;
 
 /**
  * @method float getPrice()
@@ -15,11 +17,11 @@ class PriceModel extends AbstractModel
     public string $price;
     public string $currency;
 
-    public function getMapping(): array
+    public function getMapping(): Mapping
     {
-        return [
-            'price'  => 'price',
-            'currency' => 'currencySymbol',
-        ];
+        return Mapping::new(
+            Property::new('price', 'price'),
+            Property::new('currency', 'currencySymbol'),
+        );
     }
 }
