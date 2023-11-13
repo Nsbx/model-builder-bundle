@@ -25,5 +25,6 @@
     "price": {
         "price": 19.99,
         "currencySymbol": "$"
-    }
+    },
+    "date": null
 }

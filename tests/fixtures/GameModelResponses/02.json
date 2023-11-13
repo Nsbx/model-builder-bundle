@@ -24,5 +24,6 @@
     "price": {
         "price": 5.99,
         "currencySymbol": "€"
-    }
+    },
+    "date": "2023-11-13T17:00:00.000Z"
 }

@@ -87,7 +87,15 @@ abstract class AbstractModel implements ModelInterface
 
         $propertyData = $this->getValueOrNull($modelData, $mappingOption->path);
         $modelClass   = $mappingOption->modelClass;
-        $itemModel    = new $modelClass($propertyData);
+
+        try {
+            $itemModel = new $modelClass($propertyData);
+        } catch (\TypeError $e) {
+            if (!$mappingOption->nullable) {
+                throw $e;
+            }
+            $itemModel = null;
+        }
 
         $propertyAccessor->setValue($this, $mappingOption->property, $itemModel);
     }

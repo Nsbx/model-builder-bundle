@@ -27,6 +27,7 @@ class GameModel extends AbstractModel
     public array $categories;
     public array $images;
     public PriceModel $price;
+    public ?\DateTime $date;
 
     public function getMapping(): Mapping
     {
@@ -37,6 +38,7 @@ class GameModel extends AbstractModel
             Property::new('categories', 'categories'),
             Collection::new('images', 'keyImages', ImageModel::class, 'type'),
             Model::new('price', 'price', PriceModel::class),
+            Model::new('date', 'date', \DateTime::class, true),
         );
     }
 }

@@ -9,14 +9,16 @@ class Model implements MappingOptionInterface
     public function __construct(
         public string $property,
         public string $path,
-        public string $modelClass
+        public string $modelClass,
+        public bool $nullable
     ) {}
 
     public static function new(
         string $property,
         string $path,
-        string $modelClass
+        string $modelClass,
+        bool $nullable = false
     ) {
-        return new self($property, $path, $modelClass);
+        return new self($property, $path, $modelClass, $nullable);
     }
 }
