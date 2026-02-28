@@ -13,18 +13,23 @@ use Symfony\Component\PropertyAccess\PropertyAccessorInterface;
 
 abstract class AbstractModel implements ModelInterface
 {
+    private ?PropertyAccessorInterface $propertyAccessor = null;
+
     public function __construct(mixed $modelData)
     {
         $this->buildModel($modelData);
     }
 
-    private function getPropertyAccessor()
+    private function getPropertyAccessor(): PropertyAccessorInterface
     {
-        return PropertyAccess::createPropertyAccessorBuilder()
-            ->disableExceptionOnInvalidIndex()
-            ->disableExceptionOnInvalidPropertyPath()
-            ->getPropertyAccessor()
-        ;
+        if ($this->propertyAccessor === null) {
+            $this->propertyAccessor = PropertyAccess::createPropertyAccessorBuilder()
+                ->disableExceptionOnInvalidIndex()
+                ->disableExceptionOnInvalidPropertyPath()
+                ->getPropertyAccessor();
+        }
+
+        return $this->propertyAccessor;
     }
 
     public function __call(string $name, array $arguments): mixed
@@ -32,14 +37,18 @@ abstract class AbstractModel implements ModelInterface
         $propertyAccessor = $this->getPropertyAccessor();
 
         switch (true) {
-            case str_contains($name, 'get'):
-                $methodPath = str_replace('get', '', $name);
+            case str_starts_with($name, 'get'):
+                $methodPath = substr($name, 3);
                 $methodPath = lcfirst($methodPath);
                 return $propertyAccessor->getValue($this, $methodPath);
-            case str_contains($name, 'set'):
-                $methodPath = str_replace('set', '', $name);
+            case str_starts_with($name, 'set'):
+                $methodPath = substr($name, 3);
                 $methodPath = lcfirst($methodPath);
-                $propertyAccessor->setValue($this, $methodPath, current($arguments));
+                $propertyAccessor->setValue(
+                    $this,
+                    $methodPath,
+                    current($arguments),
+                );
                 return $this;
         }
     }
@@ -58,7 +67,10 @@ abstract class AbstractModel implements ModelInterface
                     $this->buildCollectionOption($mappingOption, $modelData);
                     break;
                 case $mappingOption instanceof PropertyCollection:
-                    $this->buildPropertyCollectionOption($mappingOption, $modelData);
+                    $this->buildPropertyCollectionOption(
+                        $mappingOption,
+                        $modelData,
+                    );
                     break;
             }
         }
@@ -66,27 +78,37 @@ abstract class AbstractModel implements ModelInterface
 
     private function buildPropertyOption(
         Property $mappingOption,
-        mixed $modelData
+        mixed $modelData,
     ): void {
         $propertyAccessor = $this->getPropertyAccessor();
 
         $propertyData = $this->getValueOrNull($modelData, $mappingOption->path);
 
-        if ($mappingOption->alternativePath !== null && $propertyData === null) {
-            $propertyData = $this->getValueOrNull($modelData, $mappingOption->alternativePath);
+        if (
+            $mappingOption->alternativePath !== null &&
+            $propertyData === null
+        ) {
+            $propertyData = $this->getValueOrNull(
+                $modelData,
+                $mappingOption->alternativePath,
+            );
         }
 
-        $propertyAccessor->setValue($this, $mappingOption->property, $propertyData);
+        $propertyAccessor->setValue(
+            $this,
+            $mappingOption->property,
+            $propertyData,
+        );
     }
 
     private function buildModelOption(
         Model $mappingOption,
-        mixed $modelData
+        mixed $modelData,
     ): void {
         $propertyAccessor = $this->getPropertyAccessor();
 
         $propertyData = $this->getValueOrNull($modelData, $mappingOption->path);
-        $modelClass   = $mappingOption->modelClass;
+        $modelClass = $mappingOption->modelClass;
 
         try {
             $itemModel = new $modelClass($propertyData);
@@ -97,12 +119,16 @@ abstract class AbstractModel implements ModelInterface
             $itemModel = null;
         }
 
-        $propertyAccessor->setValue($this, $mappingOption->property, $itemModel);
+        $propertyAccessor->setValue(
+            $this,
+            $mappingOption->property,
+            $itemModel,
+        );
     }
 
     private function buildCollectionOption(
         Collection $mappingOption,
-        mixed $modelData
+        mixed $modelData,
     ): void {
         $propertyAccessor = $this->getPropertyAccessor();
 
@@ -120,7 +146,10 @@ abstract class AbstractModel implements ModelInterface
             $itemModel = new $modelClass($itemData);
 
             if ($mappingOption->indexBy !== null) {
-                $indexValue = $this->getValueOrNull($itemModel, $mappingOption->indexBy);
+                $indexValue = $this->getValueOrNull(
+                    $itemModel,
+                    $mappingOption->indexBy,
+                );
 
                 $this->{$mappingOption->property}[$indexValue] = $itemModel;
                 continue;
@@ -132,10 +161,8 @@ abstract class AbstractModel implements ModelInterface
 
     private function buildPropertyCollectionOption(
         PropertyCollection $mappingOption,
-        mixed $modelData
+        mixed $modelData,
     ): void {
-        $propertyAccessor = $this->getPropertyAccessor();
-
         $propertyData = $this->getValueOrNull($modelData, $mappingOption->path);
 
         if ($propertyData === null) {
@@ -145,7 +172,7 @@ abstract class AbstractModel implements ModelInterface
         $this->{$mappingOption->property} = [];
 
         foreach ($propertyData as $itemData) {
-            $data                               = $this->getValueOrNull($itemData, $mappingOption->subPath);
+            $data = $this->getValueOrNull($itemData, $mappingOption->subPath);
             $this->{$mappingOption->property}[] = $data;
         }
     }
@@ -156,7 +183,7 @@ abstract class AbstractModel implements ModelInterface
 
         try {
             $propertyData = $propertyAccessor->getValue($modelData, $path);
-        } catch (\Exception $exception) {
+        } catch (\Symfony\Component\PropertyAccess\Exception\AccessException|\Symfony\Component\PropertyAccess\Exception\UnexpectedTypeException $exception) {
             $propertyData = null;
         }
 

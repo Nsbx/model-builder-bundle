@@ -7,7 +7,7 @@ namespace Nsbx\Bundle\ModelBuilder\Mapping;
 class Mapping
 {
     /** @var MappingOptionInterface[] */
-    private static array $mappingOptions;
+    private array $mappingOptions;
 
     public static function new(...$mappingOptions): self
     {
@@ -15,11 +15,11 @@ class Mapping
 
         foreach ($mappingOptions as $mappingOption) {
             if (!$mappingOption instanceof MappingOptionInterface) {
-                throw new \Exception('Options should be of type MappingOptionInterface');
+                throw new \InvalidArgumentException('Options should be of type MappingOptionInterface');
             }
         }
 
-        $instance::$mappingOptions = $mappingOptions;
+        $instance->mappingOptions = $mappingOptions;
 
         return $instance;
     }
@@ -29,7 +29,7 @@ class Mapping
      */
     public function getMappingOptions(): array
     {
-        return self::$mappingOptions;
+        return $this->mappingOptions;
     }
 
 }

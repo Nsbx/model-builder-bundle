@@ -1,3 +1,0 @@
-services:
-    nsbx.model-builder:
-        class: Nsbx\Bundle\ModelBuilder\ModelBuilder

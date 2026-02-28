@@ -10,15 +10,15 @@ class Property implements MappingOptionInterface
         public string $property,
         public string $path,
         public ?string $alternativePath,
-        public bool $nullable = false
+        public bool $nullable = false,
     ) {}
 
     public static function new(
         string $property,
         string $path,
         ?string $alternativePath = null,
-        bool $nullable = false
+        bool $nullable = false,
     ) {
-        return new self($property, $path, $alternativePath);
+        return new self($property, $path, $alternativePath, $nullable);
     }
 }
